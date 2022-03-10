@@ -5,7 +5,7 @@
         <namespace>/gazebo</namespace>
         <argument>model_states:=model_states_demo</argument>
       </ros>
-      <update_rate>1.0</update_rate>
+      <update_rate>1000.0</update_rate>
     </plugin>
     <scene>
       <background>0 0 0 255</background>
