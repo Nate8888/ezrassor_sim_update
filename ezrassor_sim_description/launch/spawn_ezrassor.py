@@ -57,7 +57,7 @@ def __spawn_robot(context, *args, **kwargs):
     robot_state_publisher = Node(
         package="robot_state_publisher",
         executable="robot_state_publisher",
-        namespace=LaunchConfiguration("robot_name"),
+        namespace=namespace,
         output="screen",
         parameters=[params],
     )
@@ -175,6 +175,23 @@ def __spawn_robot(context, *args, **kwargs):
         output="screen",
     )
 
+    depth_img_to_ls = Node(
+            package='depthimage_to_laserscan',
+            node_executable='depthimage_to_laserscan_node',
+            namespace=robot_name,
+            node_name=f'depthimage_to_laserscan_node_{robot_name}',
+            remappings=[('depth',f'/{robot_name}/depth_camera/depth/image_raw'),
+                        ('depth_camera_info', f'/{robot_name}/depth_camera/depth/camera_info'),
+                        ('scan', f'/{robot_name}/obstacle_detection/combined')],
+            parameters=[{
+                    "output_frame": "camera_link",
+                    "scan_time": 0.033,
+                    "range_min": 0.105,
+                    "range_max": 10.0,
+                    "scan_height": 1
+            }]
+    )
+
     return [
         RegisterEventHandler(
             event_handler=OnProcessExit(
@@ -214,6 +231,7 @@ def __spawn_robot(context, *args, **kwargs):
         ),
         robot_state_publisher,
         spawn_entity,
+        depth_img_to_ls,
     ]
 
 
@@ -278,6 +296,28 @@ def generate_launch_description():
         output={"both": "screen"},
     )
 
+    #param_config = os.path.join(get_package_share_directory('depthimage_to_laserscan'), 'cfg', 'param.yaml')
+
+    # pc_to_ls = Node(
+    #         package='pointcloud_to_laserscan', executable='pointcloud_to_laserscan_node',
+    #         remappings=[('cloud_in', ['ezrassor/depth_camera/points']),
+    #                     ('scan', ['/obstacle_detection/combined'])],
+    #         parameters=[{
+    #             'transform_tolerance': 0.01,
+    #             'min_height': 0.0,
+    #             'max_height': 1.0,
+    #             'angle_min': -1.5708,  # -M_PI/2
+    #             'angle_max': 1.5708,  # M_PI/2
+    #             'angle_increment': 0.0087,  # M_PI/360.0
+    #             'scan_time': 0.3333,
+    #             'range_min': 0.45,
+    #             'range_max': 4.0,
+    #             'use_inf': False,
+    #             'inf_epsilon': 1.0
+    #         }],
+    #         name='pointcloud_to_laserscan'
+    # )
+
     # Note that this package WILL NOT start Gazebo
     # instead, when this launch file is executed it will wait for /spawn_entity
     # to be available. This will automatically be available after Gazebo is launched
@@ -294,6 +334,7 @@ def generate_launch_description():
             OpaqueFunction(function=__spawn_robot),
             wheels_driver_node,
             arms_driver_node,
-            drums_driver_node,
+            drums_driver_node
+            #pc_to_ls
         ]
     )

@@ -9,15 +9,17 @@ The abstraction done by this node is necessary to be able to switch
 between hardware and software; a similarly written hardware node could
 listen to the same instructions topic and command actuators, instead of the sim.
 """
-import std_msgs.msg
+from std_msgs.msg import Float64
+from std_msgs.msg import Float64MultiArray
+
 import rclpy
 from rclpy.node import Node
 
 NODE = "drums_driver"
 FRONT_DRUMS_EXTERNAL_TOPIC = "front_drum_instructions"
-FRONT_DRUMS_INTERNAL_TOPIC = "drum_front_velocity_controller/command"
+FRONT_DRUMS_INTERNAL_TOPIC = "drum_front_velocity_controller/commands"
 BACK_DRUMS_EXTERNAL_TOPIC = "back_drum_instructions"
-BACK_DRUMS_INTERNAL_TOPIC = "drum_back_velocity_controller/command"
+BACK_DRUMS_INTERNAL_TOPIC = "drum_back_velocity_controller/commands"
 
 QUEUE_SIZE = 10
 MAX_DRUM_SPEED = 5
@@ -33,40 +35,48 @@ class DrumsSubscriber(Node):
         super().__init__("drums_driver")
 
         self.front_drums_subscription = self.create_subscription(
-            std_msgs.msg.Float64,
+            Float64,
             FRONT_DRUMS_EXTERNAL_TOPIC,
             self.handle_front_drum_movements,
             QUEUE_SIZE,
         )
 
         self.back_drums_subscription = self.create_subscription(
-            std_msgs.msg.Float64,
+            Float64,
             BACK_DRUMS_EXTERNAL_TOPIC,
             self.handle_back_drum_movements,
             QUEUE_SIZE,
         )
 
         self.front_drums_publisher = self.create_publisher(
-            std_msgs.msg.Float64, FRONT_DRUMS_INTERNAL_TOPIC, QUEUE_SIZE
+            Float64MultiArray, FRONT_DRUMS_INTERNAL_TOPIC, QUEUE_SIZE
         )
 
         self.back_drums_publisher = self.create_publisher(
-            std_msgs.msg.Float64, BACK_DRUMS_INTERNAL_TOPIC, QUEUE_SIZE
+            Float64MultiArray, BACK_DRUMS_INTERNAL_TOPIC, QUEUE_SIZE
         )
 
         self.get_logger().info("drums_driver node created successfully")
 
-    def handle_front_drum_movements(self, data: std_msgs.msg.Float64):
+    def handle_front_drum_movements(self, data):
         """Move the front drum of the robot per
         the commands encoded in the instruction
         """
-        self.front_drums_publisher.publish(data.data * MAX_DRUM_SPEED)
 
-    def handle_back_drum_movements(self, data: std_msgs.msg.Float64):
+        front_drum_msg = Float64MultiArray()
+        front_drum_msg.data = [data.data * MAX_DRUM_SPEED]
+
+        self.front_drums_publisher.publish(front_drum_msg)
+
+    def handle_back_drum_movements(self, data):
         """Move the back drum of the robot per
         the commands encoded in the instruction
         """
-        self.back_drums_publisher.publish(data.data * MAX_DRUM_SPEED)
+
+        back_drum_msg = Float64MultiArray()
+        back_drum_msg.data = [data.data * MAX_DRUM_SPEED]
+
+        self.back_drums_publisher.publish(back_drum_msg)
 
 
 def main(passed_args=None):
